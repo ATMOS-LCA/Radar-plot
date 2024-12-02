@@ -16,14 +16,22 @@ datalist = os.listdir('./data')
 #A partir da lista datalist, cria uma sub-lista apenas com os dados desejados
 typeData = input(f'Informe o tipo de dado: ')
 
-especificData = []
+specificData = []
 for data in datalist:
-    if typeData in data:
-        especificData.append(data)
+    indice_dot = data.find('.')
+    if typeData == data[16:indice_dot]:
+        specificData.append(data)
 
 #Tranforma da data de dd/mm/yyyy para yyyymmdd
-day, month, year = map(str, input(f'Informe a data que deseja visualizar: ').split('/'))
-Day = year + month + day
+d1, m1, y1 = map(str, input(f'Informe uma data inicial: ').split('/'))
+d2, m2, y2 = map(str, input(f'Informe uma data final: ').split('/'))
+
+filteredData = []
+for data in specificData:
+    if data[0:4] >= y1 and data[0:4] <= y2:
+        if data[4:6] >= m1 and data[4:6] <= m2:
+            if data[6:8] >= d1 and data[6:8] <= d2:
+                filteredData.append(data)
 
 fpath = './data/' + datalist[0]
 frames = []
