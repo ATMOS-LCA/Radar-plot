@@ -85,13 +85,25 @@ def plotRadar(datalist):
       fpath = '/content/drive/MyDrive/data/' + fname #Alterar o caminho da pasta, caso nao seja executado no colab
       data = wrl.io.hdf.read_generic_hdf5(os.path.join(fpath))
       data_vol.append(data)
+
+      #Conversao para refletividade
+      data_raw = data["dataset1/data1/data"]["data"]
+      gain = data["dataset1/data1/what"]["attrs"]["gain"]
+      offset = data["dataset1/data1/what"]["attrs"]["offset"]
+      dbZ = data_raw * gain + offset
+
+      for i in range(len(dbZ)):
+        for j in range(len(dbZ[i])):
+          if dbZ[i][j] <= 10:
+            dbZ[i][j] = 0
+
       #th_vals.append(attrs['Elevation'])
       print(data.keys())
       #print(data["dataset3/data1/data"].keys())
       #print(data["dataset3/data1/data"]["attrs"])
       #print(data["dataset3/data1/data"]["data"].shape)
       fig = plt.figure(figsize=(10,10))
-      da = wrl.georef.create_xarray_dataarray(data["dataset1/data1/data"]["data"]).wrl.georef.georeference()
+      da = wrl.georef.create_xarray_dataarray(dbZ).wrl.georef.georeference()
       im = da.wrl.vis.plot(fig=fig, crs="cg")
   data_vol = np.array(data_vol)
   #th_vals = np.array(th_vals)
@@ -177,7 +189,7 @@ def precipitacao(datalist):
               Z = 10**(valor_dbz / 10)
 
           R1 = (Z / 200) ** (1/1.6) #Relacao Z-R para o estado de Sao Paulo
-          R2 = (Z / 300) ** (1/1.4) #Relacao Z-R para a região Norte
+          R2 = (Z / 315) ** (1/1.2) #Relacao Z-R para o estado do Pará
 
           R_Sudeste.append(float(R1))
           R_Norte.append(float(R2))
@@ -192,7 +204,7 @@ def precipitacao(datalist):
 
   print("\n")
   print(f"Acumulado utilizando a relação Z-R para o estado de São Paulo: {acumulado_Sudeste}")
-  print(f"Acumulado utilizando a relação Z-R para a região Norte: {acumulado_Norte}")
+  print(f"Acumulado utilizando a relação Z-R para o estado do Pará: {acumulado_Norte}")
 
 #Acessa a pasta data e cria uma lista com os arquivos que estao la
 datalist = os.listdir('/content/drive/MyDrive/data') #Alterar o caminho da pasta, caso nao seja executado no colab
