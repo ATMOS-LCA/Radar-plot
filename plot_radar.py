@@ -182,8 +182,8 @@ def precipitacao(datalist):
           bin_idx = int(round(distancia_m / rscale))
 
           valor_dbz = dbZ[az_idx, bin_idx]
-          if valor_dbz <= 0:
-              valor_dbz = 0.0
+          if valor_dbz <= 10:
+              dbZ[az_idx, bin_idx] = 0.0
               Z = 0.0
           else:
               Z = 10**(valor_dbz / 10)
@@ -196,19 +196,111 @@ def precipitacao(datalist):
 
           #print(f"Indice de azimute: {az_idx}")
           #print(f"Indice de alcance: {bin_idx}")
-          print(f"Horário Leitura: {endtime}, Valor do dbZ: {valor_dbz}, R1: {R1:.2f} mm/h, R2: {R2:.2f} mm/h")
+          #print(f"Horário Leitura: {endtime}, Valor do dbZ: {valor_dbz}, R1: {R1:.2f} mm/h, R2: {R2:.2f} mm/h")
 
   #Transforma o acumulado de mm/h para mm
   acumulado_Sudeste = sum([r * (5/60) for r in R_Sudeste])
   acumulado_Norte = sum([r * (5/60) for r in R_Norte])
 
-  print("\n")
-  print(f"Acumulado utilizando a relação Z-R para o estado de São Paulo: {acumulado_Sudeste}")
-  print(f"Acumulado utilizando a relação Z-R para o estado do Pará: {acumulado_Norte}")
+  #print("\n")
+  #print(f"Acumulado utilizando a relação Z-R para o estado de São Paulo: {acumulado_Sudeste}")
+  #print(f"Acumulado utilizando a relação Z-R para o estado do Pará: {acumulado_Norte}")
+
+  return acumulado_Sudeste, acumulado_Norte
+
+def graficoChuva(datalist):
+  # --- 1. Preparar os Dados ---
+
+  # Gerar datas e horas (a cada hora por um dia)
+  datas_horas = pd.date_range(start='2025-03-13 00:00', end='2025-03-14 00:00', freq='h')
+
+  # Preparando os dados de chuva acumulado por horário
+  acumulado_pluviometro = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 0.0, 0.0, 0.0, 0.0] #Dados de chuva retirados do INMET
+  acumulado_radar_R1 = [0.0]
+  acumulado_radar_R2 = [0.0]
+
+  for i in range(0, 24):
+    datalist2 = []
+    R1 = 0.0
+    R2 = 0.0
+    for arquivo in datalist:
+      if i < 10:
+        if arquivo[8:10] == "0"+str(i):
+          datalist2.append(arquivo)
+      else:
+        if arquivo[8:10] == str(i):
+          datalist2.append(arquivo)
+    print(datalist2)
+    if len(datalist2) > 0:
+      R1, R2 = precipitacao(datalist2)
+    acumulado_radar_R1.append(R1)
+    acumulado_radar_R2.append(R2)
+
+  # Criar um DataFrame para organizar os dados
+  df_precipitacao = pd.DataFrame({
+      'DataHora': datas_horas,
+      'Pluviometro': acumulado_pluviometro,
+      'Radar_R1': acumulado_radar_R1,
+      'Radar_R2': acumulado_radar_R2
+  })
+
+  # --- 2. Criar o Gráfico com Plotly ---
+
+  fig = go.Figure()
+
+  # Adicionar a série do Pluviômetro
+  fig.add_trace(go.Scatter(
+      x=df_precipitacao['DataHora'],
+      y=df_precipitacao['Pluviometro'],
+      mode='lines+markers', # Mostra linhas e marcadores para cada ponto
+      name='Pluviômetro (Observado)',
+      line=dict(color='blue', width=2),
+      marker=dict(size=6, symbol='circle')
+  ))
+
+  # Adicionar a série do Radar (Relação Z-R1)
+  fig.add_trace(go.Scatter(
+      x=df_precipitacao['DataHora'],
+      y=df_precipitacao['Radar_R1'],
+      mode='lines+markers',
+      name='Radar (Estimativa R1)',
+      line=dict(color='red', width=2, dash='dash'), # Linha tracejada para diferenciar
+      marker=dict(size=6, symbol='square')
+  ))
+
+  # Adicionar a série do Radar (Relação Z-R2)
+  fig.add_trace(go.Scatter(
+      x=df_precipitacao['DataHora'],
+      y=df_precipitacao['Radar_R2'],
+      mode='lines+markers',
+      name='Radar (Estimativa R2)',
+      line=dict(color='green', width=2, dash='dot'), # Linha pontilhada para diferenciar
+      marker=dict(size=6, symbol='diamond')
+  ))
+
+  # --- 3. Personalizar o Layout do Gráfico ---
+
+  fig.update_layout(
+      title='Comparação de Acumulado Horário de Precipitação: Radar vs. Pluviômetro',
+      xaxis_title='Data e Hora',
+      yaxis_title='Acumulado de Precipitação (mm)',
+      hovermode='x unified', # Permite ver todos os valores para um dado ponto no tempo
+      template='plotly_white', # Um tema limpo para o gráfico
+      legend_title_text='Fonte dos Dados',
+      font=dict(
+          family="Arial, sans-serif",
+          size=12,
+          color="black"
+      )
+  )
+
+  # --- 4. Exibir o Gráfico ---
+  fig.show()
 
 #Acessa a pasta data e cria uma lista com os arquivos que estao la
 datalist = os.listdir('/content/drive/MyDrive/data') #Alterar o caminho da pasta, caso nao seja executado no colab
-print(datalist)
-plotRadar(datalist)
+#print(datalist)
+#plotRadar(datalist)
 #gerarGif(datalist)
 #precipitacao(datalist)
+graficoChuva(datalist)
